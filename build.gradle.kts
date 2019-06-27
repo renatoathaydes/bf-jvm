@@ -1,3 +1,5 @@
+import org.gradle.jvm.tasks.Jar
+
 buildscript {
     repositories {
         mavenLocal()
@@ -44,4 +46,11 @@ task("runKotlin", JavaExec::class) {
     main = "BfKotlin"
     args = listOf(project.properties["arg"]?.toString() ?: helloFile)
     classpath = sourceSets["main"]!!.runtimeClasspath
+}
+
+task("printKotlinClasspath") {
+    doLast {
+        val jarFiles = setOf(tasks.withType<Jar>().first().archiveFile.get().asFile)
+        println((jarFiles + configurations.runtimeClasspath.get().files).joinToString(File.pathSeparator))
+    }
 }
