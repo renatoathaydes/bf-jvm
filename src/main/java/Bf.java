@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -29,94 +30,116 @@ final class Bf {
     }
 
     static final class PrintOp implements Op {
+        private final PrintStream out;
+
+        PrintOp( PrintStream out ) {
+            this.out = out;
+        }
+
         @Override
         public void accept( Tape tape ) {
-            System.out.print( ( char ) tape.get() );
+            out.print( ( char ) tape.get() );
         }
-    }
-
-    static final class Tape {
-        private int[] tape;
-        private int pos;
-
-        Tape() {
-            tape = new int[ 1 ];
-        }
-
-        int get() {
-            return tape[ pos ];
-        }
-
-        void inc( int x ) {
-            tape[ pos ] += x;
-        }
-
-        void move( int x ) {
-            pos += x;
-            while ( pos >= tape.length ) {
-                int[] tape = new int[ this.tape.length * 2 ];
-                System.arraycopy( this.tape, 0, tape, 0, this.tape.length );
-                this.tape = tape;
-            }
-
-        }
-    }
-
-    static final class Program {
-        static final Op INCR = tape -> tape.inc( 1 );
-        static final Op DECR = tape -> tape.inc( -1 );
-        static final Op MV_UP = tape -> tape.move( 1 );
-        static final Op MV_DOWN = tape -> tape.move( -1 );
-        static final Op PRINT = new PrintOp();
-
-        private final Op[] ops;
-
-        Program( String code ) {
-            ops = parse( code.chars().iterator() );
-        }
-
-        private Op[] parse( PrimitiveIterator.OfInt it ) {
-            List<Op> res = new ArrayList<>();
-            while ( it.hasNext() ) {
-                switch ( it.nextInt() ) {
-                    case '+':
-                        res.add( INCR );
-                        break;
-                    case '-':
-                        res.add( DECR );
-                        break;
-                    case '>':
-                        res.add( MV_UP );
-                        break;
-                    case '<':
-                        res.add( MV_DOWN );
-                        break;
-                    case '.':
-                        res.add( PRINT );
-                        break;
-                    case '[':
-                        res.add( new LoopOp( parse( it ) ) );
-                        break;
-                    case ']':
-                        return res.toArray( new Op[ 0 ] );
-                }
-            }
-            return res.toArray( new Op[ 0 ] );
-        }
-
-        void run() {
-            Tape tape = new Tape();
-            for ( Op op : ops ) op.accept( tape );
-        }
-
     }
 
     public static void main( String[] args ) throws IOException {
         byte[] code = Files.readAllBytes( Paths.get( args[ 0 ] ) );
+        executeWithTiming( new String( code, StandardCharsets.US_ASCII ) );
+    }
 
+    private static void executeWithTiming( String code ) {
         long startTime = System.currentTimeMillis();
-        Program program = new Program( new String( code, StandardCharsets.US_ASCII ) );
+        Program program = new Program( code, System.out );
         program.run();
         System.err.printf( "time: %.3fs\n", ( System.currentTimeMillis() - startTime ) / 1e3 );
     }
+
+}
+
+final class Tape {
+    private int[] tape;
+    private int pos;
+
+    Tape() {
+        tape = new int[ 16 ];
+    }
+
+    int get() {
+        return tape[ pos ];
+    }
+
+    void inc( int x ) {
+        tape[ pos ] += x;
+    }
+
+    void move( int x ) {
+        pos += x;
+        while ( pos >= tape.length ) {
+            int[] tape = new int[ this.tape.length * 2 ];
+            System.arraycopy( this.tape, 0, tape, 0, this.tape.length );
+            this.tape = tape;
+        }
+
+    }
+
+    public int[] getState() {
+        int[] tape = new int[ this.tape.length ];
+        System.arraycopy( this.tape, 0, tape, 0, this.tape.length );
+        return tape;
+    }
+
+    public int getPos() {
+        return pos;
+    }
+}
+
+final class Program {
+    private static final Bf.Op INCR = tape -> tape.inc( 1 );
+    private static final Bf.Op DECR = tape -> tape.inc( -1 );
+    private static final Bf.Op MV_UP = tape -> tape.move( 1 );
+    private static final Bf.Op MV_DOWN = tape -> tape.move( -1 );
+
+    private final Tape tape = new Tape();
+    private final Bf.Op printer;
+    private final Bf.Op[] ops;
+
+    Program( String code, PrintStream out ) {
+        printer = new Bf.PrintOp( out );
+        ops = parse( code.chars().iterator() );
+    }
+
+    private Bf.Op[] parse( PrimitiveIterator.OfInt it ) {
+        List<Bf.Op> res = new ArrayList<>();
+        while ( it.hasNext() ) {
+            switch ( it.nextInt() ) {
+                case '+':
+                    res.add( INCR );
+                    break;
+                case '-':
+                    res.add( DECR );
+                    break;
+                case '>':
+                    res.add( MV_UP );
+                    break;
+                case '<':
+                    res.add( MV_DOWN );
+                    break;
+                case '.':
+                    res.add( printer );
+                    break;
+                case '[':
+                    res.add( new Bf.LoopOp( parse( it ) ) );
+                    break;
+                case ']':
+                    return res.toArray( new Bf.Op[ 0 ] );
+            }
+        }
+        return res.toArray( new Bf.Op[ 0 ] );
+    }
+
+    Tape run() {
+        for ( Bf.Op op : ops ) op.accept( tape );
+        return tape;
+    }
+
 }
