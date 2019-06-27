@@ -66,9 +66,7 @@ class Program(code: String) {
             when (op) {
                 is Op.Inc -> tape.inc(op.v)
                 is Op.Move -> tape.move(op.v)
-                is Op.Loop -> while (tape.get() > 0) {
-                    _run(op.loop, tape)
-                }
+                is Op.Loop -> while (tape.get() > 0) _run(op.loop, tape)
                 is Op.Print -> print(tape.get().toChar())
             }
         }
