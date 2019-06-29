@@ -5,10 +5,37 @@ import java.io.IOException
 import java.io.PrintStream
 
 sealed class Op {
-    class Inc(val v: Int) : Op()
-    class Move(val v: Int) : Op()
-    class Loop(val loop: Array<Op>) : Op()
-    class Print(val out: PrintStream) : Op()
+    abstract fun run(tape: KtTape)
+
+    object Incr : Op() {
+        override fun run(tape: KtTape) = tape.inc(1)
+    }
+
+    object Decr : Op() {
+        override fun run(tape: KtTape) = tape.inc(-1)
+    }
+
+    object MoveUp : Op() {
+        override fun run(tape: KtTape) = tape.move(1)
+    }
+
+    object MoveDown : Op() {
+        override fun run(tape: KtTape) = tape.move(-1)
+    }
+
+    class Print(private val out: PrintStream) : Op() {
+        override fun run(tape: KtTape) {
+            out.print(tape.get().toChar())
+        }
+    }
+
+    class Loop(private val ops: Array<Op>) : Op() {
+        override fun run(tape: KtTape) {
+            while (tape.get() > 0) {
+                runProgram(ops, tape)
+            }
+        }
+    }
 }
 
 class KtTape {
@@ -35,6 +62,12 @@ class KtTape {
     }
 }
 
+private fun runProgram(program: Array<Op>, tape: KtTape) {
+    for (op in program) {
+        op.run(tape)
+    }
+}
+
 class KtProgram(code: String, out: PrintStream) {
     private val ops: Array<Op>
     private val printer = Op.Print(out)
@@ -48,10 +81,10 @@ class KtProgram(code: String, out: PrintStream) {
         val res = arrayListOf<Op>()
         while (it.hasNext()) {
             when (it.next()) {
-                '+' -> res.add(Op.Inc(1))
-                '-' -> res.add(Op.Inc(-1))
-                '>' -> res.add(Op.Move(1))
-                '<' -> res.add(Op.Move(-1))
+                '+' -> res.add(Op.Incr)
+                '-' -> res.add(Op.Decr)
+                '>' -> res.add(Op.MoveUp)
+                '<' -> res.add(Op.MoveDown)
                 '.' -> res.add(printer)
                 '[' -> res.add(Op.Loop(parse(it)))
                 ']' -> return res.toTypedArray()
@@ -62,19 +95,8 @@ class KtProgram(code: String, out: PrintStream) {
 
     fun run(): KtTape {
         val tape = KtTape()
-        _run(ops, tape)
+        runProgram(ops, tape)
         return tape
-    }
-
-    private fun _run(program: Array<Op>, tape: KtTape) {
-        for (op in program) {
-            when (op) {
-                is Op.Inc -> tape.inc(op.v)
-                is Op.Move -> tape.move(op.v)
-                is Op.Loop -> while (tape.get() > 0) _run(op.loop, tape)
-                is Op.Print -> op.out.print(tape.get().toChar())
-            }
-        }
     }
 }
 
