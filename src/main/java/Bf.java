@@ -43,14 +43,18 @@ final class Bf {
     }
 
     public static void main( String[] args ) throws IOException {
-        byte[] code = Files.readAllBytes( Paths.get( args[ 0 ] ) );
-        executeWithTiming( new String( code, StandardCharsets.US_ASCII ) );
+        byte[] codeBytes = Files.readAllBytes( Paths.get( args[ 0 ] ) );
+        String code = new String( codeBytes, StandardCharsets.US_ASCII );
+
+        int runs = args.length > 1 ? Integer.parseInt( args[ 1 ] ) : 1;
+        for ( int i = 0; i < runs; i++ ) {
+            runWithTiming( () -> new Program( code, System.out ).run() );
+        }
     }
 
-    private static void executeWithTiming( String code ) {
+    private static void runWithTiming( Runnable runnable ) {
         long startTime = System.currentTimeMillis();
-        Program program = new Program( code, System.out );
-        program.run();
+        runnable.run();
         System.err.printf( "time: %.3fs\n", ( System.currentTimeMillis() - startTime ) / 1e3 );
     }
 

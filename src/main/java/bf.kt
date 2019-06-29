@@ -78,12 +78,19 @@ class KtProgram(code: String, out: PrintStream) {
     }
 }
 
+fun runWithTiming(runnable: () -> Any?) {
+    val startTime = System.currentTimeMillis()
+    runnable()
+    System.err.printf("time: %.3fs\n", (System.currentTimeMillis() - startTime) / 1e3)
+}
+
 @Throws(IOException::class)
 fun main(args: Array<String>) {
-    val code = File(args[0]).readText()
+    val code = File(args[0]).readText(Charsets.US_ASCII)
 
-    val startTime = System.currentTimeMillis()
-    val program = KtProgram(code, System.out)
-    program.run()
-    System.err.printf("time: %.3fs\n", (System.currentTimeMillis() - startTime) / 1e3)
+    val runs = if (args.size > 1) args[1].toInt() else 1
+
+    repeat(runs) {
+        runWithTiming(KtProgram(code, System.out)::run)
+    }
 }

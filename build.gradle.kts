@@ -38,13 +38,16 @@ val helloFile = "src/test/resources/hello.bf"
 
 task("runJava", JavaExec::class) {
     main = if (project.hasProperty("original")) "bf" else "Bf"
-    args = listOf(project.properties["arg"]?.toString() ?: helloFile)
+    args = listOf(
+            project.properties["file"]?.toString() ?: helloFile,
+            project.properties.getOrDefault("count", "4").toString())
     classpath = sourceSets["main"]!!.runtimeClasspath
 }
 
 task("runKotlin", JavaExec::class) {
     main = "BfKotlin"
-    args = listOf(project.properties["arg"]?.toString() ?: helloFile)
+    args = listOf(project.properties["file"]?.toString() ?: helloFile,
+            project.properties.getOrDefault("count", "4").toString())
     classpath = sourceSets["main"]!!.runtimeClasspath
 }
 
