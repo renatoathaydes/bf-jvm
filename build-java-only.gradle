@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+}
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+def helloFile = "src/test/resources/hello.bf"
+
+task("runJava", type: JavaExec) {
+    dependsOn 'jar'
+    main = project.hasProperty("original") ? "bf" : "Bf"
+    args = [project.properties["file"]?.toString() ?: helloFile,
+            project.properties.get("count", "4").toString()]
+    classpath = sourceSets.main.runtimeClasspath
+}
